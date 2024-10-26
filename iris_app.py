@@ -22,6 +22,10 @@ class IrisRequest(BaseModel):
     petal_width: float
 
 
+# Define the target names based on the dataset
+target_names = iris.target_names
+
+
 @app.post("/predict")
 def predict(iris: IrisRequest):
     # Prepare the input data
@@ -34,8 +38,9 @@ def predict(iris: IrisRequest):
 
     # Predict the class
     prediction = model.predict(data)
-    predicted_class = iris.target_names[prediction[0]]
+    predicted_class = target_names[prediction[0]]  # Access `target_names` directly
     return {"prediction": predicted_class}
+
 
 @app.get("/")
 def hello():
