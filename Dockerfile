@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir fastapi uvicorn scikit-learn
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "iris_app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "iris_app:app", "--host", "0.0.0.0", "--port", "80"]
