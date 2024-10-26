@@ -1,0 +1,42 @@
+name: Deploy Nginx
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: code checkout
+      uses: actions/checkout@v2
+
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+
+    - name: install the gcloud cli
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GOOGLE_PROJECT }}
+        install_components: 'gke-gcloud-auth-plugin'
+
+    - name: build and push the docker image
+      env:
+        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      run: |
+        # Authenticate Docker with Artifact Registry
+        gcloud auth configure-docker us-central1-docker.pkg.dev
+        docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:latest .
+        docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:latest
+
+    - name: deploy to gke
+      env:
+        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+      run: |
+        gcloud container clusters get-credentials ai-cluster --region us-central1
+        sed -i "s/GOOGLE_PROJECT/$GOOGLE_PROJECT/g" resources.yaml
+        kubectl apply -f resources.yaml
