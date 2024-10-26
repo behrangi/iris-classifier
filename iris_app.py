@@ -36,3 +36,7 @@ def predict(iris: IrisRequest):
     prediction = model.predict(data)
     predicted_class = iris.target_names[prediction[0]]
     return {"prediction": predicted_class}
+
+@app.post("/")
+def hello():
+    return {"Hello": "World"}
