@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: code checkout
+    - name: Code Checkout
       uses: actions/checkout@v2
 
     - name: Authenticate with Google Cloud
@@ -18,25 +18,38 @@ jobs:
       with:
         credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
 
-    - name: install the gcloud cli
+    - name: Install the gcloud CLI
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ secrets.GOOGLE_PROJECT }}
         install_components: 'gke-gcloud-auth-plugin'
 
-    - name: build and push the docker image
+    - name: Build and push the Docker image
       env:
         GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
       run: |
+        # Generate a unique image tag (using Git commit hash)
+        IMAGE_TAG=$(git rev-parse --short HEAD)
+        
+        # Full image name with tag
+        IMAGE_NAME="us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:$IMAGE_TAG"
+
         # Authenticate Docker with Artifact Registry
         gcloud auth configure-docker us-central1-docker.pkg.dev
-        docker build -t us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:latest .
-        docker push us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:latest
 
-    - name: deploy to gke
+        # Build and push the Docker image
+        docker build -t $IMAGE_NAME .
+        docker push $IMAGE_NAME
+
+    - name: Deploy to GKE
       env:
         GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
       run: |
+        # Configure kubectl to use the GKE cluster
         gcloud container clusters get-credentials ai-cluster --region us-central1
-        sed -i "s/GOOGLE_PROJECT/$GOOGLE_PROJECT/g" resources.yaml
+
+        # Update the image in resources.yaml with the new tag
+        sed -i "s|image: us-central1-docker.pkg.dev/$GOOGLE_PROJECT/maven-repo/images/iris:.*|image: $IMAGE_NAME|" resources.yaml
+
+        # Apply the updated resources.yaml to Kubernetes
         kubectl apply -f resources.yaml
